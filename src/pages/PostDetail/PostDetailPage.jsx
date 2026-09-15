@@ -6,33 +6,31 @@ import StatusBadge, { STATUS_OPTIONS } from '../../components/post/StatusBadge'
 import CommentList from '../../components/comment/CommentList'
 import CommentInput from '../../components/comment/CommentInput'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
-import { fetchPostById, deletePost, updatePostStatus } from '../../api/posts'
+import { fetchPostById, deletePost, updatePostStatus, recordPostView } from '../../api/posts'
 import { fetchComments, createComment, deleteComment } from '../../api/comments'
+import { addFavorite, removeFavorite } from '../../api/favorites'
 import { findOrCreateChatRoom } from '../../api/chat'
 import { formatPrice, formatTimeAgo } from '../../utils/format'
-import { getCategoryLabel } from '../../mocks/categories'
-import { getLocationLabel } from '../../mocks/locations'
-import { findUserById } from '../../mocks/users'
 import { useAuthStore } from '../../store/useAuthStore'
-import { useWishlistStore } from '../../store/useWishlistStore'
 
 export default function PostDetailPage() {
   const { postId } = useParams()
   const navigate = useNavigate()
   const currentUser = useAuthStore((s) => s.user)
-  const isWished = useWishlistStore((s) => s.isWished(postId))
-  const toggleWish = useWishlistStore((s) => s.toggle)
 
   const [post, setPost] = useState(null)
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [favoritePending, setFavoritePending] = useState(false)
 
   const loadPost = () => fetchPostById(postId).then(setPost)
-  const loadComments = () => fetchComments(postId).then(setComments)
+  const loadComments = () => fetchComments(postId).then((result) => setComments(result.items))
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([loadPost(), loadComments()]).finally(() => setLoading(false))
+    Promise.all([loadPost(), loadComments()])
+      .then(() => recordPostView(postId))
+      .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId])
 
@@ -45,31 +43,40 @@ export default function PostDetailPage() {
     )
   }
 
-  const isOwner = currentUser?.id === post.sellerId
-  const seller = findUserById(post.sellerId)
+  const isOwner = currentUser?.id === post.seller?.id
+  const isSold = post.status === 'SOLD'
 
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠어요?')) return
-    await deletePost(post.id)
+    await deletePost(post.id, post.version)
     navigate('/mypage', { replace: true })
   }
 
   const handleStatusChange = async (status) => {
-    const updated = await updatePostStatus(post.id, status)
+    if (status === post.status) return
+    const updated = await updatePostStatus(post.id, { status, version: post.version })
     setPost(updated)
   }
 
+  const handleToggleFavorite = async () => {
+    if (favoritePending) return
+    setFavoritePending(true)
+    const next = !post.isFavorited
+    try {
+      await (next ? addFavorite(post.id) : removeFavorite(post.id))
+      setPost((p) => ({ ...p, isFavorited: next, favoriteCount: p.favoriteCount + (next ? 1 : -1) }))
+    } finally {
+      setFavoritePending(false)
+    }
+  }
+
   const handleChat = async () => {
-    const room = await findOrCreateChatRoom({
-      postId: post.id,
-      buyerId: currentUser.id,
-      sellerId: post.sellerId,
-    })
+    const room = await findOrCreateChatRoom(post.id)
     navigate(`/chats/${room.id}`)
   }
 
   const handleAddComment = async (content) => {
-    const comment = await createComment({ postId: post.id, authorId: currentUser.id, content })
+    const comment = await createComment(post.id, content)
     setComments((prev) => [...prev, comment])
   }
 
@@ -83,7 +90,7 @@ export default function PostDetailPage() {
       <TopBar
         title="판매글"
         right={
-          isOwner ? (
+          isOwner && !isSold ? (
             <button onClick={() => navigate(`/posts/${post.id}/edit`)} className="text-sm text-gray-500">
               수정
             </button>
@@ -94,10 +101,10 @@ export default function PostDetailPage() {
       <ImageSlider images={post.images} />
 
       <div className="px-4 py-4">
-        <p className="text-xs font-medium text-brand-500">{getCategoryLabel(post.category)}</p>
+        <p className="text-xs font-medium text-brand-500">{post.category?.name}</p>
         <h1 className="mt-1 text-lg font-bold text-gray-900">{post.title}</h1>
         <p className="mt-1 text-xs text-gray-400">
-          {seller?.nickname} · {getLocationLabel(post.location)} · {formatTimeAgo(post.createdAt)} · 조회{' '}
+          {post.seller?.nickname} · {post.tradePlace?.name} · {formatTimeAgo(post.createdAt)} · 조회{' '}
           {post.viewCount}
         </p>
 
@@ -112,7 +119,8 @@ export default function PostDetailPage() {
               <button
                 key={opt.value}
                 onClick={() => handleStatusChange(opt.value)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium ${
+                disabled={isSold}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-40 ${
                   post.status === opt.value
                     ? 'border-brand-500 bg-brand-50 text-brand-600'
                     : 'border-gray-200 text-gray-500'
@@ -141,11 +149,12 @@ export default function PostDetailPage() {
       {!isOwner && (
         <div className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 items-center gap-3 border-t border-gray-100 bg-white px-4 py-3">
           <button
-            onClick={() => toggleWish(post.id)}
+            onClick={handleToggleFavorite}
+            disabled={favoritePending}
             aria-label="찜하기"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-xl"
           >
-            {isWished ? '❤️' : '🤍'}
+            {post.isFavorited ? '❤️' : '🤍'}
           </button>
           <button
             onClick={handleChat}

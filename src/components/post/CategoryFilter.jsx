@@ -1,9 +1,20 @@
-import { CATEGORIES } from '../../mocks/categories'
+import { useEffect, useState } from 'react'
+import { fetchCategories } from '../../api/categories'
+
+const ALL_OPTION = { id: 'all', name: '전체' }
 
 export default function CategoryFilter({ value, onChange }) {
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    fetchCategories().then(setCategories)
+  }, [])
+
+  const options = [ALL_OPTION, ...categories]
+
   return (
     <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-3">
-      {CATEGORIES.map((c) => (
+      {options.map((c) => (
         <button
           key={c.id}
           onClick={() => onChange(c.id)}
@@ -13,7 +24,7 @@ export default function CategoryFilter({ value, onChange }) {
               : 'bg-gray-100 text-gray-600 active:bg-gray-200'
           }`}
         >
-          {c.label}
+          {c.name}
         </button>
       ))}
     </div>

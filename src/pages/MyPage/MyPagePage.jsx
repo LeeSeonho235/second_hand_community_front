@@ -9,9 +9,9 @@ import { useAuthStore } from '../../store/useAuthStore'
 
 const FILTERS = [
   { value: 'all', label: '전체' },
-  { value: 'selling', label: '판매중' },
-  { value: 'reserved', label: '예약중' },
-  { value: 'sold', label: '거래완료' },
+  { value: 'SELLING', label: '판매중' },
+  { value: 'RESERVED', label: '예약중' },
+  { value: 'SOLD', label: '거래완료' },
 ]
 
 export default function MyPagePage() {
@@ -24,14 +24,14 @@ export default function MyPagePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchPostsBySeller(currentUser.id).then((data) => {
-      setPosts(data)
+    fetchPostsBySeller(currentUser.id).then((items) => {
+      setPosts(items)
       setLoading(false)
     })
   }, [currentUser.id])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
@@ -42,14 +42,12 @@ export default function MyPagePage() {
       <PageHeader title="마이페이지" />
 
       <div className="flex items-center gap-3 border-b-8 border-gray-50 px-4 py-5">
-        <img
-          src={currentUser.avatar}
-          alt={currentUser.nickname}
-          className="h-14 w-14 rounded-full bg-gray-100 object-cover"
-        />
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg font-semibold text-gray-500">
+          {currentUser.nickname?.[0] ?? '?'}
+        </div>
         <div className="flex-1">
           <p className="text-base font-bold text-gray-900">{currentUser.nickname}</p>
-          <p className="text-xs text-gray-400">@{currentUser.username}</p>
+          <p className="text-xs text-gray-400">{currentUser.email}</p>
         </div>
         <button onClick={handleLogout} className="text-sm text-gray-400 underline">
           로그아웃

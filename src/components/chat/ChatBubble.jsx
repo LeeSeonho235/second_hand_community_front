@@ -9,7 +9,7 @@ export default function ChatBubble({ message, isMine }) {
             isMine ? 'rounded-br-sm bg-brand-500 text-white' : 'rounded-bl-sm bg-gray-100 text-gray-800'
           }`}
         >
-          {message.text}
+          {message.content}
         </div>
         <span className="shrink-0 text-[10px] text-gray-400">{formatChatTime(message.createdAt)}</span>
       </div>

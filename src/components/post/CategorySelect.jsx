@@ -1,7 +1,4 @@
-import { CATEGORIES } from '../../mocks/categories'
-
-export default function CategorySelect({ value, onChange, label = '카테고리' }) {
-  const options = CATEGORIES.filter((c) => c.id !== 'all')
+export default function CategorySelect({ value, onChange, options = [], label = '카테고리' }) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>
@@ -15,7 +12,7 @@ export default function CategorySelect({ value, onChange, label = '카테고리'
         </option>
         {options.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.label}
+            {c.name}
           </option>
         ))}
       </select>

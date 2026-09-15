@@ -1,25 +1,36 @@
-const MAX_IMAGES = 5
+import { useState } from 'react'
+import { uploadImage, deleteImage } from '../../api/images'
 
-// 실제 백엔드 연동 시 여기서 서버 업로드 API를 호출해 URL을 받아오도록 바꾸면 됩니다.
-const readAsDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+const MAX_IMAGES = 10
 
 export default function ImageUploader({ images, onChange }) {
+  const [error, setError] = useState('')
+  const [uploading, setUploading] = useState(false)
+
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     const remaining = MAX_IMAGES - images.length
-    const dataUrls = await Promise.all(files.slice(0, remaining).map(readAsDataUrl))
-    onChange([...images, ...dataUrls])
+    if (remaining <= 0) return
+
+    setError('')
+    setUploading(true)
+    try {
+      const uploaded = await Promise.all(files.slice(0, remaining).map((file) => uploadImage(file)))
+      onChange([...images, ...uploaded])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleRemove = (index) => {
+    const target = images[index]
     onChange(images.filter((_, i) => i !== index))
+    if (target?.id) {
+      deleteImage(target.id).catch(() => {})
+    }
   }
 
   return (
@@ -29,12 +40,19 @@ export default function ImageUploader({ images, onChange }) {
           <label className="flex h-20 w-20 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-gray-200 text-gray-400">
             <span className="text-xl">📷</span>
             <span className="text-xs">{images.length}/{MAX_IMAGES}</span>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={handleFiles}
+              disabled={uploading}
+            />
           </label>
         )}
-        {images.map((src, index) => (
-          <div key={index} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-            <img src={src} alt={`업로드 이미지 ${index + 1}`} className="h-full w-full object-cover" />
+        {images.map((image, index) => (
+          <div key={image.id ?? index} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+            <img src={image.url} alt={`업로드 이미지 ${index + 1}`} className="h-full w-full object-cover" />
             <button
               type="button"
               onClick={() => handleRemove(index)}
@@ -46,6 +64,8 @@ export default function ImageUploader({ images, onChange }) {
           </div>
         ))}
       </div>
+      {uploading && <p className="mt-1 text-xs text-gray-400">업로드 중...</p>}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
     </div>
   )
 }

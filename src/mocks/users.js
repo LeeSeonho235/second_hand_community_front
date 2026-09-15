@@ -1,25 +1,29 @@
 export const MOCK_USERS = [
   {
     id: 'u1',
-    username: 'sunny95',
+    email: 'sunny95@campus.ac.kr',
     password: '1234',
     nickname: '햇살가득',
-    avatar: 'https://i.pravatar.cc/100?img=12',
+    createdAt: '2026-08-01T09:00:00+09:00',
   },
   {
     id: 'u2',
-    username: 'jinho',
+    email: 'jinho@campus.ac.kr',
     password: '1234',
     nickname: '진호',
-    avatar: 'https://i.pravatar.cc/100?img=33',
+    createdAt: '2026-08-02T09:00:00+09:00',
   },
   {
     id: 'u3',
-    username: 'yuna',
+    email: 'yuna@campus.ac.kr',
     password: '1234',
     nickname: '유나',
-    avatar: 'https://i.pravatar.cc/100?img=47',
+    createdAt: '2026-08-03T09:00:00+09:00',
   },
 ]
 
 export const findUserById = (id) => MOCK_USERS.find((u) => u.id === id)
+export const findUserByEmail = (email) => MOCK_USERS.find((u) => u.email === email)
+
+// 응답에는 PublicUser({ id, nickname })만 노출합니다.
+export const toPublicUser = (user) => (user ? { id: user.id, nickname: user.nickname } : null)

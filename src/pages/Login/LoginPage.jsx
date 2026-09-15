@@ -9,7 +9,7 @@ export default function LoginPage() {
   const location = useLocation()
   const login = useAuthStore((s) => s.login)
 
-  const [form, setForm] = useState({ username: '', password: '' })
+  const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -36,11 +36,12 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <Input
-          label="아이디"
-          placeholder="아이디를 입력하세요"
-          value={form.username}
-          onChange={handleChange('username')}
-          autoComplete="username"
+          label="이메일"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={handleChange('email')}
+          autoComplete="email"
           required
         />
         <Input
@@ -67,7 +68,7 @@ export default function LoginPage() {
       </p>
 
       <p className="mt-8 text-center text-xs text-gray-300">
-        테스트 계정: sunny95 / 1234
+        테스트 계정: sunny95@campus.ac.kr / 1234
       </p>
     </div>
   )

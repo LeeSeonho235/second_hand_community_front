@@ -4,7 +4,8 @@ import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuthStore } from '../../store/useAuthStore'
 
-const INITIAL_FORM = { username: '', password: '', passwordConfirm: '', nickname: '' }
+const INITIAL_FORM = { email: '', password: '', passwordConfirm: '', nickname: '' }
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function SignupPage() {
   const navigate = useNavigate()
@@ -18,7 +19,7 @@ export default function SignupPage() {
 
   const validate = () => {
     const next = {}
-    if (!form.username.trim()) next.username = '아이디를 입력하세요.'
+    if (!EMAIL_PATTERN.test(form.email)) next.email = '올바른 이메일 형식을 입력하세요.'
     if (form.password.length < 4) next.password = '비밀번호는 4자 이상이어야 합니다.'
     if (form.password !== form.passwordConfirm) next.passwordConfirm = '비밀번호가 일치하지 않습니다.'
     if (!form.nickname.trim()) next.nickname = '닉네임을 입력하세요.'
@@ -34,7 +35,7 @@ export default function SignupPage() {
       await signup(form)
       navigate('/login', { replace: true })
     } catch (err) {
-      setErrors({ username: err.message })
+      setErrors({ email: err.message })
     } finally {
       setLoading(false)
     }
@@ -46,11 +47,12 @@ export default function SignupPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <Input
-          label="아이디"
-          placeholder="아이디를 입력하세요"
-          value={form.username}
-          onChange={handleChange('username')}
-          error={errors.username}
+          label="이메일"
+          type="email"
+          placeholder="이메일을 입력하세요"
+          value={form.email}
+          onChange={handleChange('email')}
+          error={errors.email}
           required
         />
         <Input

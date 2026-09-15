@@ -13,22 +13,39 @@ export default function HomePage() {
   const [keyword, setKeyword] = useState('')
   const [category, setCategory] = useState('all')
   const [posts, setPosts] = useState([])
+  const [page, setPage] = useState({ nextCursor: null, hasNext: false })
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const debouncedKeyword = useDebounce(keyword, 300)
+
+  const categoryId = category === 'all' ? undefined : category
 
   useEffect(() => {
     let ignore = false
     setLoading(true)
-    fetchPosts({ keyword: debouncedKeyword, category }).then((data) => {
+    fetchPosts({ q: debouncedKeyword, categoryId }).then((result) => {
       if (!ignore) {
-        setPosts(data)
+        setPosts(result.items)
+        setPage(result.page)
         setLoading(false)
       }
     })
     return () => {
       ignore = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedKeyword, category])
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const result = await fetchPosts({ q: debouncedKeyword, categoryId, cursor: page.nextCursor })
+      setPosts((prev) => [...prev, ...result.items])
+      setPage(result.page)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   return (
     <div className="relative min-h-screen bg-white">
@@ -41,11 +58,24 @@ export default function HomePage() {
       {loading ? (
         <LoadingSpinner />
       ) : (
-        <PostList
-          posts={posts}
-          emptyTitle="검색 결과가 없어요"
-          emptyDescription="다른 키워드나 카테고리로 찾아보세요"
-        />
+        <>
+          <PostList
+            posts={posts}
+            emptyTitle="검색 결과가 없어요"
+            emptyDescription="다른 키워드나 카테고리로 찾아보세요"
+          />
+          {page.hasNext && (
+            <div className="px-4 py-4">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="w-full rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-600"
+              >
+                {loadingMore ? '불러오는 중...' : '더 보기'}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <button

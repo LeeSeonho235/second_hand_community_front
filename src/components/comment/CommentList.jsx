@@ -14,7 +14,7 @@ export default function CommentList({ comments, onDelete }) {
         <CommentItem
           key={comment.id}
           comment={comment}
-          canDelete={comment.authorId === currentUser?.id}
+          canDelete={comment.author?.id === currentUser?.id}
           onDelete={onDelete}
         />
       ))}

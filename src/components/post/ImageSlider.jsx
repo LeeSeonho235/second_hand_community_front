@@ -9,7 +9,7 @@ export default function ImageSlider({ images }) {
 
   return (
     <div className="relative aspect-square w-full overflow-hidden bg-gray-100">
-      <img src={images[index]} alt={`상품 이미지 ${index + 1}`} className="h-full w-full object-cover" />
+      <img src={images[index].url} alt={`상품 이미지 ${index + 1}`} className="h-full w-full object-cover" />
 
       {images.length > 1 && (
         <>

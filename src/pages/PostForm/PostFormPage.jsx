@@ -8,32 +8,43 @@ import CategorySelect from '../../components/post/CategorySelect'
 import LocationSelect from '../../components/post/LocationSelect'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import { createPost, updatePost, fetchPostById, deletePost } from '../../api/posts'
-import { useAuthStore } from '../../store/useAuthStore'
+import { fetchCategories } from '../../api/categories'
+import { fetchTradePlaces } from '../../api/tradePlaces'
 
-const INITIAL_FORM = { title: '', description: '', price: '', category: '', location: '', images: [] }
+const INITIAL_FORM = { title: '', description: '', price: '', categoryId: '', tradePlaceId: '', images: [] }
 
 export default function PostFormPage() {
   const { postId } = useParams()
   const isEditMode = Boolean(postId)
   const navigate = useNavigate()
-  const currentUser = useAuthStore((s) => s.user)
 
   const [form, setForm] = useState(INITIAL_FORM)
-  const [loading, setLoading] = useState(isEditMode)
+  const [version, setVersion] = useState(null)
+  const [categories, setCategories] = useState([])
+  const [tradePlaces, setTradePlaces] = useState([])
+  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!isEditMode) return
-    fetchPostById(postId).then((post) => {
-      setForm({
-        title: post.title,
-        description: post.description,
-        price: String(post.price),
-        category: post.category,
-        location: post.location,
-        images: post.images,
-      })
+    Promise.all([
+      fetchCategories(),
+      fetchTradePlaces(),
+      isEditMode ? fetchPostById(postId) : Promise.resolve(null),
+    ]).then(([categoryList, tradePlaceList, post]) => {
+      setCategories(categoryList)
+      setTradePlaces(tradePlaceList)
+      if (post) {
+        setForm({
+          title: post.title,
+          description: post.description,
+          price: String(post.price),
+          categoryId: post.category?.id ?? '',
+          tradePlaceId: post.tradePlace?.id ?? '',
+          images: post.images,
+        })
+        setVersion(post.version)
+      }
       setLoading(false)
     })
   }, [postId, isEditMode])
@@ -43,8 +54,8 @@ export default function PostFormPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (form.images.length === 0) return setError('이미지를 1장 이상 등록해주세요.')
-    if (!form.category) return setError('카테고리를 선택해주세요.')
-    if (!form.location) return setError('거래 희망 장소를 선택해주세요.')
+    if (!form.categoryId) return setError('카테고리를 선택해주세요.')
+    if (!form.tradePlaceId) return setError('거래 희망 장소를 선택해주세요.')
     setError('')
     setSubmitting(true)
 
@@ -52,19 +63,21 @@ export default function PostFormPage() {
       title: form.title,
       description: form.description,
       price: Number(form.price),
-      category: form.category,
-      location: form.location,
-      images: form.images,
+      categoryId: form.categoryId,
+      tradePlaceId: form.tradePlaceId,
+      imageIds: form.images.map((img) => img.id),
     }
 
     try {
       if (isEditMode) {
-        await updatePost(postId, payload)
-        navigate(`/posts/${postId}`)
+        const updated = await updatePost(postId, { ...payload, version })
+        navigate(`/posts/${updated.id}`)
       } else {
-        const created = await createPost({ ...payload, sellerId: currentUser.id })
+        const created = await createPost(payload)
         navigate(`/posts/${created.id}`)
       }
+    } catch (err) {
+      setError(err.message)
     } finally {
       setSubmitting(false)
     }
@@ -72,7 +85,7 @@ export default function PostFormPage() {
 
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠어요?')) return
-    await deletePost(postId)
+    await deletePost(postId, version)
     navigate('/mypage', { replace: true })
   }
 
@@ -125,8 +138,8 @@ export default function PostFormPage() {
           required
         />
 
-        <CategorySelect value={form.category} onChange={update('category')} />
-        <LocationSelect value={form.location} onChange={update('location')} />
+        <CategorySelect value={form.categoryId} onChange={update('categoryId')} options={categories} />
+        <LocationSelect value={form.tradePlaceId} onChange={update('tradePlaceId')} options={tradePlaces} />
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 

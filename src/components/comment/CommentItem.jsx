@@ -1,16 +1,13 @@
-import { findUserById } from '../../mocks/users'
 import { formatTimeAgo } from '../../utils/format'
 
 export default function CommentItem({ comment, canDelete, onDelete }) {
-  const author = findUserById(comment.authorId)
+  const author = comment.author
 
   return (
     <div className="flex gap-2 px-4 py-3">
-      <img
-        src={author?.avatar}
-        alt={author?.nickname}
-        className="h-8 w-8 shrink-0 rounded-full bg-gray-100 object-cover"
-      />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+        {author?.nickname?.[0] ?? '?'}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-800">{author?.nickname ?? '알 수 없음'}</p>
