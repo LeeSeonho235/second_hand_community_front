@@ -1,8 +1,9 @@
 import axios from 'axios'
 
-// Spring Boot 백엔드가 준비되면 .env의 VITE_API_BASE_URL만 실제 주소로 바꾸면 됩니다.
+// 기본은 같은 도메인의 /api/v1 입니다. Vercel(vercel.json)과 개발 서버(vite.config.js)가 백엔드로 넘겨줍니다.
+// 다른 백엔드를 직접 부르려면 .env의 VITE_API_BASE_URL에 주소를 넣으세요.
 export const apiClient = axios.create({
-  baseURL: `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'}/api/v1`,
+  baseURL: `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true, // 리프레시 토큰 HttpOnly 쿠키 전달용
 })
@@ -53,6 +54,13 @@ apiClient.interceptors.response.use(
   async (error) => {
     const { config, response } = error
     const code = response?.data?.error?.code
+    // CSRF 쿠키가 만료(2시간)되면 토큰을 새로 받아 한 번만 다시 시도합니다.
+    if (response?.status === 403 && code === 'CSRF_INVALID' && config && !config._csrfRetried) {
+      config._csrfRetried = true
+      const token = await fetchCsrfToken()
+      config.headers = { ...config.headers, 'X-CSRF-Token': token }
+      return apiClient(config)
+    }
     if (response?.status === 401 && code === 'ACCESS_TOKEN_EXPIRED' && config && !config._retried) {
       config._retried = true
       refreshPromise ??= refreshAccessToken().finally(() => {
@@ -79,8 +87,7 @@ const normalizeError = (error) => {
 // 성공 응답은 { data: ... } 형태이므로 data.data만 꺼내 씁니다. 204는 본문이 없습니다.
 export const unwrap = (response) => response.data?.data
 
-// 백엔드가 아직 없어서 지금은 mock 데이터로 화면을 완성합니다.
-// 배포 전에는 .env의 VITE_USE_MOCK=false 로 바꿔서 실제 API를 호출하세요.
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'
+// 기본은 실제 API 호출입니다. mock 데이터로 보려면 .env에 VITE_USE_MOCK=true 를 넣으세요.
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 export const mockDelay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms))
