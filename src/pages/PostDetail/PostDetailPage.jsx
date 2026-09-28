@@ -6,6 +6,7 @@ import StatusBadge, { STATUS_OPTIONS } from '../../components/post/StatusBadge'
 import CommentList from '../../components/comment/CommentList'
 import CommentInput from '../../components/comment/CommentInput'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import EmptyState from '../../components/common/EmptyState'
 import { fetchPostById, deletePost, updatePostStatus, recordPostView } from '../../api/posts'
 import { fetchComments, createComment, deleteComment } from '../../api/comments'
 import { addFavorite, removeFavorite } from '../../api/favorites'
@@ -22,17 +23,34 @@ export default function PostDetailPage() {
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
   const [favoritePending, setFavoritePending] = useState(false)
+  const [error, setError] = useState('')
 
   const loadPost = () => fetchPostById(postId).then(setPost)
   const loadComments = () => fetchComments(postId).then((result) => setComments(result.items))
 
   useEffect(() => {
     setLoading(true)
+    setError('')
     Promise.all([loadPost(), loadComments()])
-      .then(() => recordPostView(postId))
+      .then(() => {
+        // 조회수 집계 실패는 화면 표시에 영향을 주지 않도록 조용히 넘깁니다.
+        recordPostView(postId)
+          .then(({ viewCount }) => setPost((p) => (p ? { ...p, viewCount } : p)))
+          .catch(() => {})
+      })
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId])
+
+  if (error) {
+    return (
+      <div>
+        <TopBar title="판매글" />
+        <EmptyState icon="⚠️" title="판매글을 불러오지 못했어요" description={error} />
+      </div>
+    )
+  }
 
   if (loading || !post) {
     return (
@@ -46,16 +64,30 @@ export default function PostDetailPage() {
   const isOwner = currentUser?.id === post.seller?.id
   const isSold = post.status === 'SOLD'
 
+  // 요청 실패 시 메시지를 보여주고, 버전 충돌이면 최신 글을 다시 불러옵니다.
+  const handleActionError = (err) => {
+    alert(err.message)
+    if (err.code === 'VERSION_CONFLICT') loadPost().catch(() => {})
+  }
+
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠어요?')) return
-    await deletePost(post.id, post.version)
-    navigate('/mypage', { replace: true })
+    try {
+      await deletePost(post.id, post.version)
+      navigate('/mypage', { replace: true })
+    } catch (err) {
+      handleActionError(err)
+    }
   }
 
   const handleStatusChange = async (status) => {
     if (status === post.status) return
-    const updated = await updatePostStatus(post.id, { status, version: post.version })
-    setPost(updated)
+    try {
+      const updated = await updatePostStatus(post.id, { status, version: post.version })
+      setPost(updated)
+    } catch (err) {
+      handleActionError(err)
+    }
   }
 
   const handleToggleFavorite = async () => {
@@ -65,24 +97,38 @@ export default function PostDetailPage() {
     try {
       await (next ? addFavorite(post.id) : removeFavorite(post.id))
       setPost((p) => ({ ...p, isFavorited: next, favoriteCount: p.favoriteCount + (next ? 1 : -1) }))
+    } catch (err) {
+      alert(err.message)
     } finally {
       setFavoritePending(false)
     }
   }
 
   const handleChat = async () => {
-    const room = await findOrCreateChatRoom(post.id)
-    navigate(`/chats/${room.id}`)
+    try {
+      const room = await findOrCreateChatRoom(post.id)
+      navigate(`/chats/${room.id}`)
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   const handleAddComment = async (content) => {
-    const comment = await createComment(post.id, content)
-    setComments((prev) => [...prev, comment])
+    try {
+      const comment = await createComment(post.id, content)
+      setComments((prev) => [...prev, comment])
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   const handleDeleteComment = async (commentId) => {
-    await deleteComment(commentId)
-    setComments((prev) => prev.filter((c) => c.id !== commentId))
+    try {
+      await deleteComment(commentId)
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+    } catch (err) {
+      alert(err.message)
+    }
   }
 
   return (

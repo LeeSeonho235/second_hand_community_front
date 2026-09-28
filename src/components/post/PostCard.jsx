@@ -18,6 +18,8 @@ export default function PostCard({ post, showWishButton = true, onFavoriteChange
       await (next ? addFavorite(post.id) : removeFavorite(post.id))
       setIsFavorited(next)
       onFavoriteChange?.(post.id, next)
+    } catch (err) {
+      alert(err.message)
     } finally {
       setPending(false)
     }

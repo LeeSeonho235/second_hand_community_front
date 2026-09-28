@@ -5,6 +5,7 @@ import SearchBar from '../../components/post/SearchBar'
 import CategoryFilter from '../../components/post/CategoryFilter'
 import PostList from '../../components/post/PostList'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import EmptyState from '../../components/common/EmptyState'
 import { fetchPosts } from '../../api/posts'
 import { useDebounce } from '../../hooks/useDebounce'
 
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [page, setPage] = useState({ nextCursor: null, hasNext: false })
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState('')
   const debouncedKeyword = useDebounce(keyword, 300)
 
   const categoryId = category === 'all' ? undefined : category
@@ -23,13 +25,19 @@ export default function HomePage() {
   useEffect(() => {
     let ignore = false
     setLoading(true)
-    fetchPosts({ q: debouncedKeyword, categoryId }).then((result) => {
-      if (!ignore) {
+    setError('')
+    fetchPosts({ q: debouncedKeyword, categoryId })
+      .then((result) => {
+        if (ignore) return
         setPosts(result.items)
         setPage(result.page)
-        setLoading(false)
-      }
-    })
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.message)
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
     return () => {
       ignore = true
     }
@@ -42,6 +50,8 @@ export default function HomePage() {
       const result = await fetchPosts({ q: debouncedKeyword, categoryId, cursor: page.nextCursor })
       setPosts((prev) => [...prev, ...result.items])
       setPage(result.page)
+    } catch (err) {
+      alert(err.message)
     } finally {
       setLoadingMore(false)
     }
@@ -57,6 +67,8 @@ export default function HomePage() {
 
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" title="판매글을 불러오지 못했어요" description={error} />
       ) : (
         <>
           <PostList

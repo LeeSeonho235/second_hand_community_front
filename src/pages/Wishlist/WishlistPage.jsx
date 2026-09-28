@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react'
 import PageHeader from '../../components/layout/PageHeader'
 import PostList from '../../components/post/PostList'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import EmptyState from '../../components/common/EmptyState'
 import { fetchMyFavorites } from '../../api/favorites'
 
 export default function WishlistPage() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     setLoading(true)
-    fetchMyFavorites().then((result) => {
-      setPosts(result.items.map((item) => item.post))
-      setLoading(false)
-    })
+    fetchMyFavorites()
+      .then((result) => setPosts(result.items.map((item) => item.post)))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleFavoriteChange = (postId, favorited) => {
@@ -27,6 +29,8 @@ export default function WishlistPage() {
       <PageHeader title="찜 목록" />
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" title="찜 목록을 불러오지 못했어요" description={error} />
       ) : (
         <PostList
           posts={posts}

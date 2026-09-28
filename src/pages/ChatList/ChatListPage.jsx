@@ -8,12 +8,13 @@ import { fetchChatRooms } from '../../api/chat'
 export default function ChatListPage() {
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchChatRooms().then((result) => {
-      setRooms(result.items)
-      setLoading(false)
-    })
+    fetchChatRooms()
+      .then((result) => setRooms(result.items))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {
@@ -28,7 +29,9 @@ export default function ChatListPage() {
   return (
     <div className="min-h-screen bg-white">
       <PageHeader title="채팅" />
-      {rooms.length === 0 ? (
+      {error ? (
+        <EmptyState icon="⚠️" title="채팅 목록을 불러오지 못했어요" description={error} />
+      ) : rooms.length === 0 ? (
         <EmptyState icon="💬" title="채팅 내역이 없어요" description="판매글에서 채팅을 시작해보세요" />
       ) : (
         rooms.map((room) => <ChatRoomListItem key={room.id} room={room} />)

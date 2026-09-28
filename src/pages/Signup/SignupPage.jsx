@@ -35,9 +35,11 @@ export default function SignupPage() {
       await signup(form)
       navigate('/login', { replace: true })
     } catch (err) {
-      // 서버 검증 오류는 해당 입력칸에, 그 외(이메일 중복 등)는 이메일 칸에 표시합니다.
+      // 서버 검증 오류와 중복 오류는 해당 입력칸에, 그 외는 이메일 칸에 표시합니다.
       const fieldErrors = err.fieldErrors ?? {}
-      setErrors(Object.keys(fieldErrors).length ? fieldErrors : { email: err.message })
+      if (Object.keys(fieldErrors).length) setErrors(fieldErrors)
+      else if (err.code === 'NICKNAME_ALREADY_EXISTS') setErrors({ nickname: err.message })
+      else setErrors({ email: err.message })
     } finally {
       setLoading(false)
     }

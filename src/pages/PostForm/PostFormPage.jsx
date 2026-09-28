@@ -31,22 +31,24 @@ export default function PostFormPage() {
       fetchCategories(),
       fetchTradePlaces(),
       isEditMode ? fetchPostById(postId) : Promise.resolve(null),
-    ]).then(([categoryList, tradePlaceList, post]) => {
-      setCategories(categoryList)
-      setTradePlaces(tradePlaceList)
-      if (post) {
-        setForm({
-          title: post.title,
-          description: post.description,
-          price: String(post.price),
-          categoryId: post.category?.id ?? '',
-          tradePlaceId: post.tradePlace?.id ?? '',
-          images: post.images,
-        })
-        setVersion(post.version)
-      }
-      setLoading(false)
-    })
+    ])
+      .then(([categoryList, tradePlaceList, post]) => {
+        setCategories(categoryList)
+        setTradePlaces(tradePlaceList)
+        if (post) {
+          setForm({
+            title: post.title,
+            description: post.description,
+            price: String(post.price),
+            categoryId: post.category?.id ?? '',
+            tradePlaceId: post.tradePlace?.id ?? '',
+            images: post.images,
+          })
+          setVersion(post.version)
+        }
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
   }, [postId, isEditMode])
 
   const update = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
@@ -85,8 +87,12 @@ export default function PostFormPage() {
 
   const handleDelete = async () => {
     if (!window.confirm('정말 삭제하시겠어요?')) return
-    await deletePost(postId, version)
-    navigate('/mypage', { replace: true })
+    try {
+      await deletePost(postId, version)
+      navigate('/mypage', { replace: true })
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   if (loading) {

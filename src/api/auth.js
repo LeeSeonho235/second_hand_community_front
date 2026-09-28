@@ -59,11 +59,15 @@ export const refresh = async () => {
 }
 
 export const logout = async () => {
-  if (USE_MOCK) {
-    await mockDelay(100)
-  } else {
-    await apiClient.post('/auth/logout', null, await withCsrf())
+  try {
+    if (USE_MOCK) {
+      await mockDelay(100)
+    } else {
+      await apiClient.post('/auth/logout', null, await withCsrf())
+    }
+  } finally {
+    // 서버 호출이 실패해도 이 브라우저의 로그인 상태는 지웁니다.
+    setAccessToken(null)
+    clearCsrfToken()
   }
-  setAccessToken(null)
-  clearCsrfToken()
 }

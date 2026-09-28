@@ -100,9 +100,15 @@ export const fetchMessages = async (roomId, { cursor, afterSequence, limit = 30 
     return { items, page: { nextCursor: null, hasNext: false } }
   }
 
-  const params = afterSequence !== undefined ? { afterSequence, limit } : { cursor, limit }
-  const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params })
-  return unwrap(response)
+  if (afterSequence !== undefined) {
+    const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params: { afterSequence, limit } })
+    return unwrap(response)
+  }
+
+  // 과거 메시지는 sequence 내림차순으로 오므로, 화면에 그리기 좋게 오름차순으로 뒤집습니다.
+  const response = await apiClient.get(`/chat/rooms/${roomId}/messages`, { params: { cursor, limit } })
+  const result = unwrap(response)
+  return { ...result, items: [...result.items].reverse() }
 }
 
 export const sendMessage = async (roomId, { clientMessageId, content }) => {

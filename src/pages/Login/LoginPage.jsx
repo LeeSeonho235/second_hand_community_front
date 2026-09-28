@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Input from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import { useAuthStore } from '../../store/useAuthStore'
+import { USE_MOCK } from '../../api/client'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -67,9 +68,11 @@ export default function LoginPage() {
         </Link>
       </p>
 
-      <p className="mt-8 text-center text-xs text-gray-300">
-        테스트 계정: sunny95@campus.ac.kr / 1234
-      </p>
+      {USE_MOCK && (
+        <p className="mt-8 text-center text-xs text-gray-300">
+          테스트 계정: sunny95@campus.ac.kr / 1234
+        </p>
+      )}
     </div>
   )
 }

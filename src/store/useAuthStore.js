@@ -21,8 +21,11 @@ export const useAuthStore = create(
       },
 
       logout: async () => {
-        await authApi.logout()
-        set({ user: null, isAuthenticated: false })
+        try {
+          await authApi.logout()
+        } finally {
+          set({ user: null, isAuthenticated: false })
+        }
       },
 
       // 액세스 토큰은 메모리에만 있어 새로고침하면 사라집니다.

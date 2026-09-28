@@ -4,12 +4,20 @@ import TopBar from '../../components/layout/TopBar'
 import ChatBubble from '../../components/chat/ChatBubble'
 import ChatInput from '../../components/chat/ChatInput'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
+import EmptyState from '../../components/common/EmptyState'
 import { fetchChatRoomById, fetchMessages, sendMessage, mockAutoReply } from '../../api/chat'
 import { fetchPostById } from '../../api/posts'
 import { formatPrice } from '../../utils/format'
 import { useAuthStore } from '../../store/useAuthStore'
 
 const POLL_INTERVAL_MS = 3000
+
+// 전송 응답과 폴링 결과에 같은 메시지가 겹쳐 올 수 있어 id 기준으로 합치고 sequence 순으로 정렬합니다.
+const mergeMessages = (prev, incoming) => {
+  const byId = new Map(prev.map((m) => [m.id, m]))
+  incoming.forEach((m) => byId.set(m.id, m))
+  return [...byId.values()].sort((a, b) => a.sequence - b.sequence)
+}
 
 export default function ChatRoomPage() {
   const { roomId } = useParams()
@@ -20,20 +28,27 @@ export default function ChatRoomPage() {
   const [post, setPost] = useState(null)
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const bottomRef = useRef(null)
   const lastSequenceRef = useRef(0)
 
   useEffect(() => {
     let ignore = false
-    fetchChatRoomById(roomId).then(async (r) => {
-      if (ignore) return
-      setRoom(r)
-      const result = await fetchMessages(roomId)
-      if (ignore) return
-      setMessages(result.items)
-      lastSequenceRef.current = result.items[result.items.length - 1]?.sequence ?? 0
-      setLoading(false)
-    })
+    const load = async () => {
+      try {
+        const r = await fetchChatRoomById(roomId)
+        const result = await fetchMessages(roomId)
+        if (ignore) return
+        setRoom(r)
+        setMessages(result.items)
+        lastSequenceRef.current = result.items[result.items.length - 1]?.sequence ?? 0
+      } catch (err) {
+        if (!ignore) setError(err.message)
+      } finally {
+        if (!ignore) setLoading(false)
+      }
+    }
+    load()
     return () => {
       ignore = true
     }
@@ -48,10 +63,14 @@ export default function ChatRoomPage() {
   useEffect(() => {
     if (!room) return
     const interval = setInterval(async () => {
-      const result = await fetchMessages(roomId, { afterSequence: lastSequenceRef.current })
-      if (result.items.length > 0) {
-        setMessages((prev) => [...prev, ...result.items])
-        lastSequenceRef.current = result.nextAfterSequence
+      try {
+        const result = await fetchMessages(roomId, { afterSequence: lastSequenceRef.current })
+        if (result.items.length > 0) {
+          setMessages((prev) => mergeMessages(prev, result.items))
+          lastSequenceRef.current = Math.max(lastSequenceRef.current, result.nextAfterSequence)
+        }
+      } catch {
+        // 일시적인 네트워크 오류는 다음 폴링에서 다시 시도합니다.
       }
     }, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
@@ -60,6 +79,15 @@ export default function ChatRoomPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
+
+  if (error) {
+    return (
+      <div>
+        <TopBar title="채팅방" />
+        <EmptyState icon="⚠️" title="채팅방을 불러오지 못했어요" description={error} />
+      </div>
+    )
+  }
 
   if (loading || !room) {
     return (
@@ -72,14 +100,16 @@ export default function ChatRoomPage() {
 
   const handleSend = async (content) => {
     const clientMessageId = crypto.randomUUID()
-    const message = await sendMessage(room.id, { clientMessageId, content })
-    setMessages((prev) => [...prev, message])
-    lastSequenceRef.current = message.sequence
+    let message
+    try {
+      message = await sendMessage(room.id, { clientMessageId, content })
+    } catch (err) {
+      alert(err.message)
+      return
+    }
+    setMessages((prev) => mergeMessages(prev, [message]))
     mockAutoReply(room.id).then((reply) => {
-      if (reply) {
-        setMessages((prev) => [...prev, reply])
-        lastSequenceRef.current = reply.sequence
-      }
+      if (reply) setMessages((prev) => mergeMessages(prev, [reply]))
     })
   }
 

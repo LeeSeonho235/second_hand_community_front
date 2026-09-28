@@ -88,17 +88,31 @@ export const fetchPosts = async ({ q = '', categoryId, status, sellerId, cursor,
     return { items: items.map(toSummary), page }
   }
 
-  // sellerId는 "내 판매글" 조회를 위해 명세를 확장한 파라미터입니다 (명세에 별도 엔드포인트가 없음).
   // 빈 검색어(q=)는 검증 오류가 날 수 있어 값이 있을 때만 보냅니다.
   const response = await apiClient.get('/posts', {
-    params: { q: q.trim() || undefined, categoryId, status, sellerId, cursor, limit },
+    params: { q: q.trim() || undefined, categoryId, status, cursor, limit },
   })
   return unwrap(response)
 }
 
+// 명세에 판매자별 조회 파라미터가 없어서, 목록을 페이지 단위로 받아 판매자 ID로 거릅니다.
+const MAX_SELLER_SCAN_PAGES = 10
+
 export const fetchPostsBySeller = async (sellerId) => {
-  const { items } = await fetchPosts({ sellerId, limit: 100 })
-  return items
+  if (USE_MOCK) {
+    const { items } = await fetchPosts({ sellerId, limit: 100 })
+    return items
+  }
+
+  const mine = []
+  let cursor
+  for (let i = 0; i < MAX_SELLER_SCAN_PAGES; i += 1) {
+    const { items, page } = await fetchPosts({ cursor, limit: 100 })
+    mine.push(...items.filter((post) => post.seller?.id === sellerId))
+    if (!page.hasNext) break
+    cursor = page.nextCursor
+  }
+  return mine
 }
 
 export const fetchPostById = async (postId) => {

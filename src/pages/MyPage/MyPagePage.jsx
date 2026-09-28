@@ -22,17 +22,21 @@ export default function MyPagePage() {
   const [posts, setPosts] = useState([])
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchPostsBySeller(currentUser.id).then((items) => {
-      setPosts(items)
-      setLoading(false)
-    })
+    fetchPostsBySeller(currentUser.id)
+      .then(setPosts)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false))
   }, [currentUser.id])
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login', { replace: true })
+    try {
+      await logout()
+    } finally {
+      navigate('/login', { replace: true })
+    }
   }
 
   const filteredPosts = posts.filter((p) => filter === 'all' || p.status === filter)
@@ -73,6 +77,8 @@ export default function MyPagePage() {
 
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" title="내 판매글을 불러오지 못했어요" description={error} />
       ) : filteredPosts.length === 0 ? (
         <EmptyState icon="📦" title="해당하는 판매글이 없어요" />
       ) : (
