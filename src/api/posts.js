@@ -89,7 +89,10 @@ export const fetchPosts = async ({ q = '', categoryId, status, sellerId, cursor,
   }
 
   // sellerId는 "내 판매글" 조회를 위해 명세를 확장한 파라미터입니다 (명세에 별도 엔드포인트가 없음).
-  const response = await apiClient.get('/posts', { params: { q, categoryId, status, sellerId, cursor, limit } })
+  // 빈 검색어(q=)는 검증 오류가 날 수 있어 값이 있을 때만 보냅니다.
+  const response = await apiClient.get('/posts', {
+    params: { q: q.trim() || undefined, categoryId, status, sellerId, cursor, limit },
+  })
   return unwrap(response)
 }
 

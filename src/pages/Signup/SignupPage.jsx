@@ -20,7 +20,7 @@ export default function SignupPage() {
   const validate = () => {
     const next = {}
     if (!EMAIL_PATTERN.test(form.email)) next.email = '올바른 이메일 형식을 입력하세요.'
-    if (form.password.length < 4) next.password = '비밀번호는 4자 이상이어야 합니다.'
+    if (form.password.length < 8 || form.password.length > 72) next.password = '비밀번호는 8자 이상 72자 이하여야 합니다.'
     if (form.password !== form.passwordConfirm) next.passwordConfirm = '비밀번호가 일치하지 않습니다.'
     if (!form.nickname.trim()) next.nickname = '닉네임을 입력하세요.'
     setErrors(next)
@@ -35,7 +35,9 @@ export default function SignupPage() {
       await signup(form)
       navigate('/login', { replace: true })
     } catch (err) {
-      setErrors({ email: err.message })
+      // 서버 검증 오류는 해당 입력칸에, 그 외(이메일 중복 등)는 이메일 칸에 표시합니다.
+      const fieldErrors = err.fieldErrors ?? {}
+      setErrors(Object.keys(fieldErrors).length ? fieldErrors : { email: err.message })
     } finally {
       setLoading(false)
     }

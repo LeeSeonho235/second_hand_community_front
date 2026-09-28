@@ -81,6 +81,12 @@ const normalizeError = (error) => {
   const normalized = new Error(apiError?.message ?? '요청 처리 중 오류가 발생했습니다.')
   normalized.code = apiError?.code
   normalized.status = error.response?.status
+  // VALIDATION_ERROR의 details는 ["password: 크기가 8에서 72 사이여야 합니다"] 형태입니다.
+  normalized.fieldErrors = Object.fromEntries(
+    (apiError?.details ?? [])
+      .map((detail) => String(detail).split(/:\s*(.*)/s))
+      .filter(([field, message]) => field && message),
+  )
   return normalized
 }
 
