@@ -1,4 +1,13 @@
-import { apiClient, USE_MOCK, mockDelay, unwrap, withCsrf, setAccessToken, clearCsrfToken } from './client'
+import {
+  apiClient,
+  USE_MOCK,
+  mockDelay,
+  unwrap,
+  withCsrf,
+  setAccessToken,
+  clearCsrfToken,
+  refreshAccessToken,
+} from './client'
 import { MOCK_USERS, findUserByEmail } from '../mocks/users'
 
 export const login = async ({ email, password }) => {
@@ -52,10 +61,9 @@ export const fetchMe = async () => {
 
 // 액세스 토큰은 메모리에만 있어 새로고침하면 사라집니다. 리프레시 쿠키로 재발급받습니다.
 export const refresh = async () => {
-  const response = await apiClient.post('/auth/refresh', null, await withCsrf())
-  const result = unwrap(response)
-  setAccessToken(result.accessToken)
-  return result
+  const token = await refreshAccessToken()
+  if (!token) throw new Error('로그인이 만료되었습니다. 다시 로그인해주세요.')
+  return token
 }
 
 export const logout = async () => {

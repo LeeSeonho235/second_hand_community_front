@@ -4,23 +4,23 @@ export default function CommentItem({ comment, canDelete, onDelete }) {
   const author = comment.author
 
   return (
-    <div className="flex gap-2 px-4 py-3">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
+    <div className="flex gap-3 py-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas-soft text-sm font-semibold text-ink">
         {author?.nickname?.[0] ?? '?'}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-800">{author?.nickname ?? '알 수 없음'}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">{formatTimeAgo(comment.createdAt)}</span>
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-ink">{author?.nickname ?? '알 수 없음'}</p>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-xs text-mute">{formatTimeAgo(comment.createdAt)}</span>
             {canDelete && (
-              <button onClick={() => onDelete(comment.id)} className="text-xs text-gray-400 underline">
+              <button onClick={() => onDelete(comment.id)} className="text-xs font-semibold text-negative hover:underline">
                 삭제
               </button>
             )}
           </div>
         </div>
-        <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-700">{comment.content}</p>
+        <p className="mt-1 whitespace-pre-wrap break-words text-base text-body">{comment.content}</p>
       </div>
     </div>
   )

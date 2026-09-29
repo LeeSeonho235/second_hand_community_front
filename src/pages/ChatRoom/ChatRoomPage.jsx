@@ -5,6 +5,8 @@ import ChatBubble from '../../components/chat/ChatBubble'
 import ChatInput from '../../components/chat/ChatInput'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
+import PostThumbnail from '../../components/post/PostThumbnail'
+import StatusBadge from '../../components/post/StatusBadge'
 import { fetchChatRoomById, fetchMessages, sendMessage, mockAutoReply } from '../../api/chat'
 import { fetchPostById } from '../../api/posts'
 import { formatPrice } from '../../utils/format'
@@ -114,20 +116,24 @@ export default function ChatRoomPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-white">
+    <div className="flex h-dvh flex-col">
       <TopBar title={room.otherUser?.nickname ?? '채팅방'} />
 
       {post && (
         <button
           onClick={() => navigate(`/posts/${post.id}`)}
-          className="flex items-center gap-3 border-b border-gray-100 px-4 py-2.5 text-left"
+          className="mx-4 flex items-center gap-3 rounded-3xl bg-canvas p-3 text-left transition-colors hover:bg-primary-pale/40"
         >
-          <img src={post.thumbnailUrl} alt={post.title} className="h-12 w-12 rounded-lg bg-gray-100 object-cover" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-gray-800">{post.title}</p>
-            <p className="text-sm font-semibold text-gray-900">{formatPrice(post.price)}</p>
+          <PostThumbnail src={post.thumbnailUrl} alt={post.title} className="h-12 w-12 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{post.title}</p>
+            <p className="text-base font-black text-ink">{formatPrice(post.price)}</p>
           </div>
+          <StatusBadge status={post.status} />
         </button>
+      )}
+      {room.post.postDeleted && (
+        <p className="mx-4 rounded-3xl bg-canvas p-3 text-center text-sm text-mute">삭제된 판매글이에요</p>
       )}
 
       <div className="flex-1 overflow-y-auto py-3">

@@ -5,16 +5,16 @@ export default function CommentList({ comments, onDelete }) {
   const currentUser = useAuthStore((s) => s.user)
 
   if (comments.length === 0) {
-    return <p className="px-4 py-6 text-center text-sm text-gray-400">첫 댓글을 남겨보세요!</p>
+    return <p className="py-6 text-center text-sm text-mute">첫 댓글을 남겨보세요!</p>
   }
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-ink/10">
       {comments.map((comment) => (
         <CommentItem
           key={comment.id}
           comment={comment}
-          canDelete={comment.author?.id === currentUser?.id}
+          canDelete={Boolean(currentUser) && comment.author?.id === currentUser.id}
           onDelete={onDelete}
         />
       ))}

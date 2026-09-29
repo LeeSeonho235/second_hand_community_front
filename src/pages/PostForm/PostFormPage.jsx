@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TopBar from '../../components/layout/TopBar'
-import Input from '../../components/common/Input'
+import Input, { FIELD_CLASS, FieldLabel } from '../../components/common/Input'
 import Button from '../../components/common/Button'
 import ImageUploader from '../../components/post/ImageUploader'
 import CategorySelect from '../../components/post/CategorySelect'
@@ -98,19 +98,31 @@ export default function PostFormPage() {
   if (loading) {
     return (
       <div>
-        <TopBar title="판매글 수정" />
+        <TopBar title={isEditMode ? '판매글 수정' : '판매글 등록'} />
         <LoadingSpinner />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen pb-10">
       <TopBar title={isEditMode ? '판매글 수정' : '판매글 등록'} />
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 px-4 py-4">
+      <h2 className="px-4 pb-4 pt-2 text-[40px] font-black leading-[1.02] tracking-tight text-ink">
+        {isEditMode ? (
+          '판매글 수정'
+        ) : (
+          <>
+            어떤 물건을
+            <br />
+            판매하시나요?
+          </>
+        )}
+      </h2>
+
+      <form onSubmit={handleSubmit} className="mx-4 flex flex-col gap-5 rounded-3xl bg-canvas p-6">
         <div>
-          <span className="mb-1 block text-sm font-medium text-gray-700">상품 이미지</span>
+          <FieldLabel>상품 이미지</FieldLabel>
           <ImageUploader images={form.images} onChange={update('images')} />
         </div>
 
@@ -123,20 +135,21 @@ export default function PostFormPage() {
         />
 
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-gray-700">설명</span>
+          <FieldLabel>설명</FieldLabel>
           <textarea
             value={form.description}
             onChange={(e) => update('description')(e.target.value)}
             placeholder="상품 상태, 거래 방법 등을 자세히 적어주세요"
             rows={5}
             required
-            className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-brand-500"
+            className={`${FIELD_CLASS} resize-none border-ink`}
           />
         </label>
 
         <Input
-          label="가격"
+          label="가격 (원)"
           type="number"
+          inputMode="numeric"
           min="0"
           placeholder="숫자만 입력하세요"
           value={form.price}
@@ -147,7 +160,7 @@ export default function PostFormPage() {
         <CategorySelect value={form.categoryId} onChange={update('categoryId')} options={categories} />
         <LocationSelect value={form.tradePlaceId} onChange={update('tradePlaceId')} options={tradePlaces} />
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-negative">{error}</p>}
 
         <Button type="submit" disabled={submitting} className="mt-2">
           {submitting ? '저장 중...' : isEditMode ? '수정 완료' : '등록하기'}

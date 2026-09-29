@@ -35,18 +35,32 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// 로그인이 풀렸을 때(갱신 실패, 폐기된 토큰 등) 화면 상태를 비우도록 스토어가 등록하는 콜백입니다.
+let onAuthLost = null
+export const setOnAuthLost = (callback) => {
+  onAuthLost = callback
+}
+const AUTH_LOST_CODES = ['UNAUTHENTICATED', 'INVALID_TOKEN', 'TOKEN_REVOKED']
+
+// 리프레시 토큰은 사용할 때마다 교체되므로, 동시에 두 번 갱신하면 재사용으로 판정됩니다.
+// 진행 중인 갱신이 있으면 그 결과를 함께 기다립니다. 실패하면 null을 반환합니다.
 let refreshPromise = null
-const refreshAccessToken = async () => {
-  try {
-    const csrfConfig = await withCsrf()
-    const response = await apiClient.post('/auth/refresh', null, csrfConfig)
-    const token = unwrap(response).accessToken
-    setAccessToken(token)
-    return token
-  } catch {
-    setAccessToken(null)
-    return null
-  }
+export const refreshAccessToken = () => {
+  refreshPromise ??= (async () => {
+    try {
+      const csrfConfig = await withCsrf()
+      const response = await apiClient.post('/auth/refresh', null, csrfConfig)
+      const token = unwrap(response).accessToken
+      setAccessToken(token)
+      return token
+    } catch {
+      setAccessToken(null)
+      return null
+    }
+  })().finally(() => {
+    refreshPromise = null
+  })
+  return refreshPromise
 }
 
 apiClient.interceptors.response.use(
@@ -63,14 +77,15 @@ apiClient.interceptors.response.use(
     }
     if (response?.status === 401 && code === 'ACCESS_TOKEN_EXPIRED' && config && !config._retried) {
       config._retried = true
-      refreshPromise ??= refreshAccessToken().finally(() => {
-        refreshPromise = null
-      })
-      const token = await refreshPromise
+      const token = await refreshAccessToken()
       if (token) {
         config.headers = { ...config.headers, Authorization: `Bearer ${token}` }
         return apiClient(config)
       }
+      onAuthLost?.()
+    } else if (response?.status === 401 && AUTH_LOST_CODES.includes(code) && accessToken) {
+      setAccessToken(null)
+      onAuthLost?.()
     }
     return Promise.reject(normalizeError(error))
   },

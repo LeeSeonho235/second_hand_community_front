@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import TopBar from '../../components/layout/TopBar'
 import ImageSlider from '../../components/post/ImageSlider'
@@ -7,32 +7,42 @@ import CommentList from '../../components/comment/CommentList'
 import CommentInput from '../../components/comment/CommentInput'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import EmptyState from '../../components/common/EmptyState'
+import Button from '../../components/common/Button'
+import { HeartIcon } from '../../components/common/Icons'
 import { fetchPostById, deletePost, updatePostStatus, recordPostView } from '../../api/posts'
 import { fetchComments, createComment, deleteComment } from '../../api/comments'
 import { addFavorite, removeFavorite } from '../../api/favorites'
 import { findOrCreateChatRoom } from '../../api/chat'
 import { formatPrice, formatTimeAgo } from '../../utils/format'
 import { useAuthStore } from '../../store/useAuthStore'
+import { useRequireLogin } from '../../hooks/useRequireLogin'
 
 export default function PostDetailPage() {
   const { postId } = useParams()
   const navigate = useNavigate()
   const currentUser = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLoginModal = useAuthStore((s) => s.openLoginModal)
+  const requireLogin = useRequireLogin()
 
   const [post, setPost] = useState(null)
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
   const [favoritePending, setFavoritePending] = useState(false)
   const [error, setError] = useState('')
+  const viewedPostIdRef = useRef(null)
 
   const loadPost = () => fetchPostById(postId).then(setPost)
   const loadComments = () => fetchComments(postId).then((result) => setComments(result.items))
 
+  // 로그인 상태가 바뀌면 찜 여부가 달라지므로 다시 불러옵니다. 조회 이벤트는 글마다 한 번만 보냅니다.
   useEffect(() => {
-    setLoading(true)
+    if (post?.id !== postId) setLoading(true)
     setError('')
     Promise.all([loadPost(), loadComments()])
       .then(() => {
+        if (viewedPostIdRef.current === postId) return
+        viewedPostIdRef.current = postId
         // 조회수 집계 실패는 화면 표시에 영향을 주지 않도록 조용히 넘깁니다.
         recordPostView(postId)
           .then(({ viewCount }) => setPost((p) => (p ? { ...p, viewCount } : p)))
@@ -41,7 +51,7 @@ export default function PostDetailPage() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId])
+  }, [postId, isAuthenticated])
 
   if (error) {
     return (
@@ -90,7 +100,7 @@ export default function PostDetailPage() {
     }
   }
 
-  const handleToggleFavorite = async () => {
+  const toggleFavorite = async () => {
     if (favoritePending) return
     setFavoritePending(true)
     const next = !post.isFavorited
@@ -104,7 +114,7 @@ export default function PostDetailPage() {
     }
   }
 
-  const handleChat = async () => {
+  const startChat = async () => {
     try {
       const room = await findOrCreateChatRoom(post.id)
       navigate(`/chats/${room.id}`)
@@ -117,8 +127,10 @@ export default function PostDetailPage() {
     try {
       const comment = await createComment(post.id, content)
       setComments((prev) => [...prev, comment])
+      return true
     } catch (err) {
       alert(err.message)
+      return false
     }
   }
 
@@ -132,82 +144,95 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="min-h-screen pb-28">
       <TopBar
         title="판매글"
         right={
           isOwner && !isSold ? (
-            <button onClick={() => navigate(`/posts/${post.id}/edit`)} className="text-sm text-gray-500">
+            <Button variant="outline" size="sm" fullWidth={false} onClick={() => navigate(`/posts/${post.id}/edit`)}>
               수정
-            </button>
-          ) : null
+            </Button>
+          ) : undefined
         }
       />
 
-      <ImageSlider images={post.images} />
+      <div className="px-4">
+        <ImageSlider images={post.images} className="rounded-3xl" />
+      </div>
 
-      <div className="px-4 py-4">
-        <p className="text-xs font-medium text-brand-500">{post.category?.name}</p>
-        <h1 className="mt-1 text-lg font-bold text-gray-900">{post.title}</h1>
-        <p className="mt-1 text-xs text-gray-400">
-          {post.seller?.nickname} · {post.tradePlace?.name} · {formatTimeAgo(post.createdAt)} · 조회{' '}
-          {post.viewCount}
+      <section className="mx-4 mt-3 rounded-3xl bg-canvas p-6">
+        <div className="flex items-center gap-2">
+          <StatusBadge status={post.status} />
+          {post.category?.name && <span className="text-sm font-semibold text-body">{post.category.name}</span>}
+        </div>
+        <h2 className="mt-3 text-2xl font-semibold leading-snug tracking-tight text-ink">{post.title}</h2>
+        <p className="mt-2 text-[32px] font-black leading-none tracking-tight text-ink">{formatPrice(post.price)}</p>
+
+        <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-2xl bg-canvas-soft p-3">
+            <dt className="text-mute">판매자</dt>
+            <dd className="mt-0.5 font-semibold text-ink">{post.seller?.nickname}</dd>
+          </div>
+          <div className="rounded-2xl bg-canvas-soft p-3">
+            <dt className="text-mute">거래 장소</dt>
+            <dd className="mt-0.5 font-semibold text-ink">{post.tradePlace?.name}</dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-xs text-mute">
+          {formatTimeAgo(post.createdAt)} · 조회 {post.viewCount} · 찜 {post.favoriteCount}
         </p>
 
-        <div className="mt-3 flex items-center gap-2">
-          <StatusBadge status={post.status} />
-          <p className="text-xl font-bold text-gray-900">{formatPrice(post.price)}</p>
-        </div>
+        <p className="mt-5 whitespace-pre-wrap text-base leading-relaxed text-body">{post.description}</p>
 
         {isOwner && (
-          <div className="mt-3 flex gap-2">
-            {STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleStatusChange(opt.value)}
-                disabled={isSold}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-40 ${
-                  post.status === opt.value
-                    ? 'border-brand-500 bg-brand-50 text-brand-600'
-                    : 'border-gray-200 text-gray-500'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <button onClick={handleDelete} className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500">
-              삭제
-            </button>
+          <div className="mt-6 border-t border-ink/10 pt-5">
+            <p className="mb-2 text-sm font-semibold text-ink">거래 상태</p>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleStatusChange(opt.value)}
+                  disabled={isSold}
+                  aria-pressed={post.status === opt.value}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    post.status === opt.value ? 'bg-ink text-primary' : 'bg-canvas-soft text-body hover:bg-canvas-soft-hover'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <Button variant="danger" size="sm" fullWidth={false} onClick={handleDelete} className="ml-auto">
+                삭제
+              </Button>
+            </div>
           </div>
         )}
+      </section>
 
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{post.description}</p>
-      </div>
-
-      <div className="border-t-8 border-gray-50" />
-
-      <div className="px-4 py-3">
-        <p className="text-sm font-semibold text-gray-800">댓글 {comments.length}</p>
-      </div>
-      <CommentList comments={comments} onDelete={handleDeleteComment} />
-      {currentUser && <div className="pb-2"><CommentInput onSubmit={handleAddComment} /></div>}
+      <section className="mx-4 mt-3 rounded-3xl bg-canvas p-6">
+        <h3 className="text-lg font-semibold text-ink">댓글 {comments.length}</h3>
+        <CommentList comments={comments} onDelete={handleDeleteComment} />
+        {currentUser ? (
+          <CommentInput onSubmit={handleAddComment} />
+        ) : (
+          <Button variant="secondary" onClick={openLoginModal} className="mt-2">
+            로그인하고 댓글 남기기
+          </Button>
+        )}
+      </section>
 
       {!isOwner && (
-        <div className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 items-center gap-3 border-t border-gray-100 bg-white px-4 py-3">
+        <div className="fixed bottom-0 left-1/2 z-20 flex w-full max-w-md -translate-x-1/2 items-center gap-3 border-t border-ink/10 bg-canvas px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
-            onClick={handleToggleFavorite}
+            onClick={() => requireLogin(toggleFavorite)}
             disabled={favoritePending}
-            aria-label="찜하기"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-xl"
+            aria-label={post.isFavorited ? '찜 취소' : '찜하기'}
+            aria-pressed={post.isFavorited}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-ink bg-canvas text-ink transition-colors hover:bg-canvas-soft"
           >
-            {post.isFavorited ? '❤️' : '🤍'}
+            <HeartIcon filled={post.isFavorited} />
           </button>
-          <button
-            onClick={handleChat}
-            className="flex-1 rounded-xl bg-brand-500 py-3 text-sm font-semibold text-white"
-          >
-            채팅하기
-          </button>
+          <Button onClick={() => requireLogin(startChat)}>채팅하기</Button>
         </div>
       )}
     </div>

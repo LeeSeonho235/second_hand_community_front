@@ -17,25 +17,20 @@ export default function ChatListPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) {
-    return (
-      <div>
-        <PageHeader title="채팅" />
-        <LoadingSpinner />
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <PageHeader title="채팅" />
-      {error ? (
-        <EmptyState icon="⚠️" title="채팅 목록을 불러오지 못했어요" description={error} />
-      ) : rooms.length === 0 ? (
-        <EmptyState icon="💬" title="채팅 내역이 없어요" description="판매글에서 채팅을 시작해보세요" />
-      ) : (
-        rooms.map((room) => <ChatRoomListItem key={room.id} room={room} />)
-      )}
+      <div className="pt-2">
+        {loading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <EmptyState icon="⚠️" title="채팅 목록을 불러오지 못했어요" description={error} />
+        ) : rooms.length === 0 ? (
+          <EmptyState icon="💬" title="채팅 내역이 없어요" description="판매글에서 채팅을 시작해보세요" />
+        ) : (
+          rooms.map((room) => <ChatRoomListItem key={room.id} room={room} />)
+        )}
+      </div>
     </div>
   )
 }

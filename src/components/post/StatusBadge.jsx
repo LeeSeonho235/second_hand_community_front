@@ -1,7 +1,8 @@
+// 거래 상태는 의미 색(초록 계열·노랑·잉크)으로 표시하고, CTA용 라임 그린은 쓰지 않습니다.
 const STATUS_MAP = {
-  SELLING: { label: '판매중', className: 'bg-brand-500 text-white' },
-  RESERVED: { label: '예약중', className: 'bg-amber-400 text-white' },
-  SOLD: { label: '거래완료', className: 'bg-gray-400 text-white' },
+  SELLING: { label: '판매중', className: 'bg-primary-pale text-positive-deep' },
+  RESERVED: { label: '예약중', className: 'bg-warning text-warning-content' },
+  SOLD: { label: '거래완료', className: 'bg-ink text-canvas-soft' },
 }
 
 export default function StatusBadge({ status, className = '' }) {

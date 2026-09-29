@@ -1,78 +1,30 @@
-import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import Input from '../../components/common/Input'
-import Button from '../../components/common/Button'
-import { useAuthStore } from '../../store/useAuthStore'
-import { USE_MOCK } from '../../api/client'
+import LoginForm from '../../components/auth/LoginForm'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const login = useAuthStore((s) => s.login)
-
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleChange = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      await login(form)
-      navigate(location.state?.from?.pathname ?? '/', { replace: true })
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
-    <div className="flex min-h-screen flex-col justify-center px-6 py-10">
-      <h1 className="mb-1 text-2xl font-bold text-brand-600">캠퍼스마켓</h1>
-      <p className="mb-8 text-sm text-gray-400">우리 학교 학생들과 안전하게 거래해요</p>
+    <div className="flex min-h-screen flex-col px-4 py-8">
+      <Link to="/" className="mb-10 self-start text-sm font-semibold text-body underline underline-offset-4">
+        ← 둘러보기
+      </Link>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <Input
-          label="이메일"
-          type="email"
-          placeholder="이메일을 입력하세요"
-          value={form.email}
-          onChange={handleChange('email')}
-          autoComplete="email"
-          required
+      <h1 className="text-[48px] font-black leading-[1.02] tracking-tight text-ink">
+        다시 만나서
+        <br />
+        반가워요
+      </h1>
+      <p className="mb-8 mt-3 text-base text-body">우리 학교 학생들과 안전하게 거래해요.</p>
+
+      <div className="rounded-3xl bg-canvas p-6">
+        <LoginForm
+          notice={location.state?.signedUp ? '가입이 완료됐어요. 로그인해주세요.' : ''}
+          onSuccess={() => navigate(location.state?.from?.pathname ?? '/', { replace: true })}
+          onSignupClick={() => navigate('/signup')}
         />
-        <Input
-          label="비밀번호"
-          type="password"
-          placeholder="비밀번호를 입력하세요"
-          value={form.password}
-          onChange={handleChange('password')}
-          autoComplete="current-password"
-          required
-        />
-        {error && <p className="text-sm text-red-500">{error}</p>}
-
-        <Button type="submit" disabled={loading} className="mt-3">
-          {loading ? '로그인 중...' : '로그인'}
-        </Button>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-gray-500">
-        아직 회원이 아니신가요?{' '}
-        <Link to="/signup" className="font-semibold text-brand-500">
-          회원가입
-        </Link>
-      </p>
-
-      {USE_MOCK && (
-        <p className="mt-8 text-center text-xs text-gray-300">
-          테스트 계정: sunny95@campus.ac.kr / 1234
-        </p>
-      )}
+      </div>
     </div>
   )
 }

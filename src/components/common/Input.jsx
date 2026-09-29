@@ -1,14 +1,24 @@
+// 입력칸·선택칸·텍스트영역이 함께 쓰는 스타일입니다: 흰 바탕, 1px 잉크 테두리, 12px 라운드.
+export const FIELD_CLASS =
+  'w-full rounded-xl border bg-canvas px-4 py-3 text-base text-ink outline-none transition-shadow placeholder:text-mute focus:ring-2 focus:ring-primary focus:ring-offset-1'
+
+export const FieldLabel = ({ children }) => (
+  <span className="mb-1.5 block text-sm font-semibold text-ink">{children}</span>
+)
+
+export const FieldError = ({ children }) =>
+  children ? <span className="mt-1.5 block text-sm text-negative">{children}</span> : null
+
 export default function Input({ label, error, className = '', ...props }) {
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-sm font-medium text-gray-700">{label}</span>}
+      {label && <FieldLabel>{label}</FieldLabel>}
       <input
-        className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors focus:border-brand-500 ${
-          error ? 'border-red-400' : 'border-gray-200'
-        } ${className}`}
+        className={`${FIELD_CLASS} ${error ? 'border-negative' : 'border-ink'} ${className}`}
+        aria-invalid={Boolean(error)}
         {...props}
       />
-      {error && <span className="mt-1 block text-xs text-red-500">{error}</span>}
+      <FieldError>{error}</FieldError>
     </label>
   )
 }

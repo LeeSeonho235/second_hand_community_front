@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import * as authApi from '../api/auth'
-import { setAccessToken, USE_MOCK } from '../api/client'
+import { setAccessToken, setOnAuthLost, USE_MOCK } from '../api/client'
 
 export const useAuthStore = create(
   persist(
@@ -9,10 +9,15 @@ export const useAuthStore = create(
       user: null,
       isAuthenticated: false,
       isRestoring: true,
+      // 비로그인 사용자가 로그인이 필요한 기능을 누르면 로그인 모달을 띄웁니다.
+      loginModalOpen: false,
+
+      openLoginModal: () => set({ loginModalOpen: true }),
+      closeLoginModal: () => set({ loginModalOpen: false }),
 
       login: async ({ email, password }) => {
         const { user } = await authApi.login({ email, password })
-        set({ user, isAuthenticated: true })
+        set({ user, isAuthenticated: true, loginModalOpen: false })
         return user
       },
 
@@ -29,7 +34,7 @@ export const useAuthStore = create(
       },
 
       // 액세스 토큰은 메모리에만 있어 새로고침하면 사라집니다.
-      // 저장된 사용자 정보가 있으면 세션 복구(재로그인 또는 리프레시)를 시도합니다.
+      // 저장된 사용자 정보가 있으면 리프레시 쿠키로 세션 복구를 시도합니다.
       restoreSession: async () => {
         const { user } = get()
         if (!user) {
@@ -54,3 +59,5 @@ export const useAuthStore = create(
     },
   ),
 )
+
+setOnAuthLost(() => useAuthStore.setState({ user: null, isAuthenticated: false }))
